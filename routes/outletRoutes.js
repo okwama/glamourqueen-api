@@ -1,5 +1,5 @@
 const express = require('express');
-const { getOutlets, createOutlet, updateOutlet, getOutletProducts, getOutletLocation, addClientPayment, getClientPayments } = require('../controllers/outletController');
+const { getOutlets, createOutlet, updateOutlet, getOutletProducts, getOutletLocation, addClientPayment, getClientPayments, assignOutlet } = require('../controllers/outletController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -25,5 +25,7 @@ router
   .route('/:id/payments')
   .post(addClientPayment) // POST /api/outlets/:id/payments
   .get(getClientPayments); // GET /api/outlets/:id/payments
+
+router.post('/assign', assignOutlet);
 
 module.exports = router;

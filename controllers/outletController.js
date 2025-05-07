@@ -26,24 +26,43 @@ const upload = multer({
   }
 }).single('image');
 
-// Get all outlets
+// Get all outlets assigned to the logged-in sales rep
 const getOutlets = async (req, res) => {
   try {
-    const outlets = await prisma.clients.findMany({
-      select: {
-        id: true,
-        name: true,
-        balance: true,  // Just select the balance field
-        address: true,
-        latitude: true,
-        longitude: true
-      }
-    });
+    const salesRepId = req.user.id;
+    const userRole = req.user.role; // Make sure your auth middleware sets this
 
-    // Add default value for balance if it's null/undefined
+    let outlets;
+    if (userRole === 'ADMIN' || userRole === 'RELIEVER') {
+      // Reliever or Admin: view all outlets
+      outlets = await prisma.clients.findMany({
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          address: true,
+          latitude: true,
+          longitude: true
+        }
+      });
+    } else {
+      // Assigned sales rep: only view assigned outlets
+      outlets = await prisma.clients.findMany({
+        where: { salesRepId: salesRepId },
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          address: true,
+          latitude: true,
+          longitude: true
+        }
+      });
+    }
+
     const outletsWithDefaultBalance = outlets.map(outlet => ({
       ...outlet,
-      balance: outlet.balance ?? 0  // Using nullish coalescing operator
+      balance: outlet.balance ?? 0
     }));
 
     res.json(outletsWithDefaultBalance);
@@ -52,6 +71,7 @@ const getOutlets = async (req, res) => {
     res.status(500).json({ error: 'Error fetching outlets' });
   }
 };
+
 // Create a new outlet
 const createOutlet = async (req, res) => {
   const { name, address, latitude, longitude, balance, email, location, tax_pin,contact ,region_id,region,country,client_type} = req.body;
@@ -231,6 +251,26 @@ const getClientPayments = async (req, res) => {
   }
 };
 
+// Assign an outlet to a sales rep
+const assignOutlet = async (req, res) => {
+  const { outletId, salesRepId } = req.body;
+
+  if (!outletId || !salesRepId) {
+    return res.status(400).json({ error: 'Outlet ID and Sales Rep ID are required' });
+  }
+
+  try {
+    const updatedOutlet = await prisma.clients.update({
+      where: { id: parseInt(outletId) },
+      data: { salesRepId: parseInt(salesRepId) }
+    });
+    res.status(200).json(updatedOutlet);
+  } catch (error) {
+    console.error('Error assigning outlet:', error);
+    res.status(500).json({ error: 'Failed to assign outlet' });
+  }
+};
+
 module.exports = {
   getOutlets,
   createOutlet,
@@ -238,5 +278,6 @@ module.exports = {
   getOutletProducts,
   getOutletLocation,
   addClientPayment,
-  getClientPayments
+  getClientPayments,
+  assignOutlet
 };

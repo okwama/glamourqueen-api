@@ -33,6 +33,8 @@ model SalesRep {
 
   @@index([countryId], map: "SalesRep_countryId_fkey")
   UpliftSale UpliftSale[]
+  Sale Sale[]
+  Clients Clients[]
 }
 
 model LoginHistory {
@@ -170,6 +172,7 @@ model Product {
   @@index([clientId], map: "Product_clientId_fkey")
   UpliftSaleItem UpliftSaleItem[]
   OutletQuantity OutletQuantity[]
+  Sale Sale[]
 }
 
 model TransferHistory {
@@ -271,9 +274,13 @@ model Clients {
   products      Product[]
   reports       Report[]
 
-  @@index([countryId], map: "Clients_countryId_fkey")
   UpliftSale UpliftSale[]
   OutletQuantity OutletQuantity[]
+  Sale Sale[]
+  salesRepId Int?     // <-- Add this line
+  salesRep   SalesRep? @relation(fields: [salesRepId], references: [id])
+  @@index([countryId], map: "Clients_countryId_fkey")
+
 }
 
 model ClientPayment {
@@ -582,6 +589,30 @@ model SupplierHistory {
 
   @@index([purchaseId], map: "SupplierHistory_purchaseId_fkey")
   @@index([supplierId], map: "SupplierHistory_supplierId_fkey")
+}
+
+model Sale {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  quantity    Int
+  unitPrice   Float
+  total       Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  clientId    Int?
+  createdBy   Int
+  isLocked    Boolean   @default(false)
+  status      String    @default("pending")
+  voidRequest Boolean   @default(false)
+  voidStatus  String?   @default("pending")
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  client      Clients?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  creator     SalesRep  @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([clientId])
+  @@index([createdBy])
+  @@map("sales")
 }
 
 model User {

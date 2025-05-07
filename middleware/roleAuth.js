@@ -50,18 +50,20 @@ exports.hasRole = (roles) => {
 
 /**
  * Check if user is at least the specified role in hierarchy
- * Role hierarchy: ADMIN > MANAGER > USER
+ * Role hierarchy: ADMIN > RELIEVER > MANAGER > USER
  * @param {string} minimumRole - Minimum role required
  * @returns {Function} Express middleware function
  */
 exports.atLeastRole = (minimumRole) => {
   const roleHierarchy = {
     'ADMIN': 3,
-    'MANAGER': 2,
-    'USER': 1
+    'RELIEVER': 2,
+    'MANAGER': 1,
+    'SALES_REP': 0,
+    'USER': 0
   };
   
-  const minimumRoleLevel = roleHierarchy[minimumRole.toUpperCase()] || 1;
+  const minimumRoleLevel = roleHierarchy[minimumRole.toUpperCase()] || 0;
   
   return async (req, res, next) => {
     try {
