@@ -15,17 +15,8 @@ const salesController = {
       if (!quantity) return res.status(400).json({ error: 'Quantity is required' });
       if (!unitPrice) return res.status(400).json({ error: 'Unit price is required' });
       if (!total) return res.status(400).json({ error: 'Total is required' });
+      if (!clientId) return res.status(400).json({ error: 'Client ID is required' });
       if (!req.user?.id) return res.status(401).json({ error: 'User authentication required' });
-
-      // Log the incoming request for debugging
-      console.log('Creating sale with data:', {
-        productId,
-        quantity,
-        unitPrice,
-        total,
-        clientId,
-        createdBy: req.user.id
-      });
 
       // Check if product exists
       const product = await prisma.product.findUnique({
@@ -36,37 +27,65 @@ const salesController = {
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      // Check if client exists if clientId is provided
-      if (clientId) {
-        const client = await prisma.clients.findUnique({
-          where: { id: clientId }
-        });
-
-        if (!client) {
-          return res.status(404).json({ error: 'Client not found' });
-        }
-      }
-
-      // Create the sale
-      const sale = await prisma.sale.create({
-        data: {
-          productId,
-          quantity,
-          unitPrice,
-          total,
-          clientId: clientId || null,
-          createdBy: req.user.id,
-          status: 'pending',
-          isLocked: false,
-        },
-        include: {
-          product: true,
-          client: true,
-        },
+      // Check if client exists
+      const client = await prisma.clients.findUnique({
+        where: { id: clientId }
       });
 
-      console.log('Sale created successfully:', sale);
-      res.status(201).json(sale);
+      if (!client) {
+        return res.status(404).json({ error: 'Client not found' });
+      }
+
+      // Check outlet quantity
+      const outletQuantity = await prisma.outletQuantity.findFirst({
+        where: {
+          clientId: clientId,
+          productId: productId
+        }
+      });
+
+      if (!outletQuantity) {
+        return res.status(400).json({ error: 'Product not available at this outlet' });
+      }
+
+      if (outletQuantity.quantity < quantity) {
+        return res.status(400).json({ error: 'Insufficient quantity at outlet' });
+      }
+
+      // Create sale and update outlet quantity in a transaction
+      const result = await prisma.$transaction([
+        // Create sale
+        prisma.sale.create({
+          data: {
+            productId,
+            quantity,
+            unitPrice,
+            total,
+            clientId,
+            createdBy: req.user.id,
+            status: 'pending',
+            isLocked: false,
+          },
+          include: {
+            product: true,
+            client: true,
+          },
+        }),
+        // Update outlet quantity
+        prisma.outletQuantity.update({
+          where: {
+            id: outletQuantity.id
+          },
+          data: {
+            quantity: {
+              decrement: quantity
+            }
+          }
+        })
+      ]);
+
+      console.log('Sale created successfully:', result[0]);
+      res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating sale:', error);
       res.status(500).json({ 

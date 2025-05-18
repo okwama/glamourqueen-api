@@ -111,6 +111,7 @@ const createReport = async (req, res) => {
                 specificReport = await prisma.productReturn.create({
                     data: {
                         reportId: report.id,
+                        clientId: clientId,
                     },
                 });
 
