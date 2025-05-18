@@ -20,6 +20,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
+const taskRoutes = require('./routes/taskRoutes');
 const upliftSalesRoutes = require('./routes/upliftSalesRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api', uploadRoutes);
 app.use('/api', profileRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use('/api/uplift-sales', upliftSalesRoutes);
 app.use('/api/sales', salesRoutes);
 // Handle 404 Errors
